@@ -94,5 +94,5 @@ int main(int argc, char **argv)
 		intrace.paylSz = MAX_PAYL_SZ;
 	}
 
-	return threads_process(&intrace);
+	return threads_process(&intrace, true);
 }

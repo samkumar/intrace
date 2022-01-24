@@ -104,7 +104,11 @@ bool threads_resolveIP(intrace_t * intrace, const char *hostname)
 	return false;
 }
 
-int threads_process(intrace_t * intrace)
+/*
+ * samkumar: I made the display functionality optional, as I prefer to use
+ * intrace programmatically.
+ */
+int threads_process(intrace_t * intrace, bool display)
 {
 	int err;
 	pthread_attr_t attr;
@@ -160,6 +164,9 @@ int threads_process(intrace_t * intrace)
 		return errThread;
 	}
 
-	display_process(intrace);
+	if (display) {
+		display_process(intrace);
+	}
+
 	return errNone;
 }

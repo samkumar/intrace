@@ -12,7 +12,7 @@
 //#include <netinet/tcp.h>
 //#include <netinet/ip.h>
 
-#define MAX_PAYL_SZ 256
+#define MAX_PAYL_SZ 1460
 
 extern int sender_init(intrace_t * intrace);
 extern void *sender_thr(void *arg);

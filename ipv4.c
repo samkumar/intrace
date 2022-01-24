@@ -191,8 +191,14 @@ void ipv4_tcp_sock_ready(intrace_t * intrace, struct msghdr *msg)
 	struct tcphdr *tcph =
 	    (struct tcphdr *)((uint8_t *) & pkt->iph + ((uint32_t) pkt->iph.ip_hl * 4));
 
-	if (intrace->port && ntohs(tcph->th_dport) != intrace->port
-	    && ntohs(tcph->th_sport) != intrace->port) {
+	/*
+	 * samkumar: The original intrace code also matched packets where the
+	 * provided port number matches the destination port number. I assume that
+	 * this was for flexibility on the command line. For my use case, I prefer
+	 * the narrower condition of always matching the destination port number,
+	 * to avoid accidentally matching a different connection by accident.
+	 */
+	if (intrace->port && ntohs(tcph->th_sport) != intrace->port) {
 /* UNSAFE_ Fix length check */
 	} else if ((tcph->th_flags & TH_ACK)
 		   && (((intrace->ack + intrace->paylSz) == ntohl(tcph->th_ack))
@@ -222,14 +228,16 @@ void ipv4_tcp_sock_ready(intrace_t * intrace, struct msghdr *msg)
 		intrace->cnt = MAX_HOPS;
 
 	} else if (intrace->rip.s_addr == pkt->iph.ip_src.s_addr) {
-
+		/*
+		 * samkumar: The original code assumes it sees a "pure ACK" but I
+		 * account for data in the packet just in case.
+		 */
+		uint32_t datalen = ntohs(pkt->iph.ip_len) - (pkt->iph.ip_hl << 2) - (tcph->th_off << 2);
 		memcpy(&intrace->lip, &pkt->iph.ip_dst, sizeof(pkt->iph.ip_dst));
 		intrace->rport = ntohs(tcph->th_sport);
 		intrace->lport = ntohs(tcph->th_dport);
-		if (ntohl(tcph->th_seq))
-			intrace->seq = ntohl(tcph->th_seq);
-		if (ntohl(tcph->th_ack))
-			intrace->ack = ntohl(tcph->th_ack);
+		intrace->seq = ntohl(tcph->th_seq) + datalen;
+		intrace->ack = ntohl(tcph->th_ack);
 	}
 
 	while (pthread_mutex_unlock(&intrace->mutex)) ;

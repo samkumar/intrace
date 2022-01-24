@@ -13,7 +13,7 @@
 #define INTRACE_VERSION "1.6"
 #define INTRACE_AUTHORS "(C)2007-2016 Robert Swiecki <robert@swiecki.net>"
 
-#define MAX_HOPS 32
+#define MAX_HOPS 64
 
 #define UNUSED __attribute__((unused))
 

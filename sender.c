@@ -56,9 +56,15 @@ static void sender_process(intrace_t * intrace)
 				ipv6_sendpkt(intrace, 0, -1);
 				ipv6_sendpkt(intrace, 0, 0);
 			} else {
-				ipv4_sendpkt(intrace, -1, -1);
-				ipv4_sendpkt(intrace, -1, 0);
-				ipv4_sendpkt(intrace, 0, -1);
+				/*
+				 * samkumar: The original code would also send packets with
+				 * "skew" as is commented out below, but I prefer to only send
+				 * packets with the expected sequence and acknowledgement
+				 * numbers.
+				 */
+				// ipv4_sendpkt(intrace, -1, -1);
+				// ipv4_sendpkt(intrace, -1, 0);
+				// ipv4_sendpkt(intrace, 0, -1);
 				ipv4_sendpkt(intrace, 0, 0);
 			}
 
@@ -66,7 +72,7 @@ static void sender_process(intrace_t * intrace)
 		}
 
 		while (pthread_mutex_unlock(&intrace->mutex)) ;
-		usleep(750000);
+		usleep(300000);
 	}
 }
 
