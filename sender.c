@@ -43,6 +43,8 @@
 
 #include "intrace.h"
 
+useconds_t intrace_probe_gap_us = 300000;
+
 static void sender_process(intrace_t * intrace)
 {
 	for (;;) {
@@ -72,7 +74,7 @@ static void sender_process(intrace_t * intrace)
 		}
 
 		while (pthread_mutex_unlock(&intrace->mutex)) ;
-		usleep(300000);
+		usleep(intrace_probe_gap_us);
 	}
 }
 
