@@ -40,6 +40,8 @@
 #include <netinet/tcp.h>
 #include <net/if.h>
 
+#include <stdio.h>
+
 #include "intrace.h"
 
 static inline unsigned short ipv4_cksum_tcp(u_int16_t * h, u_int16_t * d, int dlen)
@@ -200,44 +202,46 @@ void ipv4_tcp_sock_ready(intrace_t * intrace, struct msghdr *msg)
 	 */
 	if (intrace->port && ntohs(tcph->th_sport) != intrace->port) {
 /* UNSAFE_ Fix length check */
-	} else if ((tcph->th_flags & TH_ACK)
-		   && (((intrace->ack + intrace->paylSz) == ntohl(tcph->th_ack))
-		       || (intrace->ack + intrace->paylSz + 1) == ntohl(tcph->th_ack))
-		   && (intrace->rip.s_addr == pkt->iph.ip_src.s_addr)
-		   && intrace->cnt && intrace->cnt < MAX_HOPS) {
-
-		int hop = intrace->cnt - 1;
-		intrace->listener.proto[hop] = IPPROTO_TCP;
-		memcpy(&intrace->listener.ip_trace[hop].s_addr, &pkt->iph.ip_src,
-		       sizeof(pkt->iph.ip_src));
-		intrace->maxhop = hop;
-		intrace->cnt = MAX_HOPS;
-
-	} else if ((tcph->th_flags & TH_RST) && intrace->cnt &&
-		   (intrace->rip.s_addr == pkt->iph.ip_src.s_addr) &&
-		   (intrace->lip.s_addr == pkt->iph.ip_dst.s_addr) &&
-		   (intrace->lport == ntohs(tcph->th_dport)) &&
-		   (intrace->rport == ntohs(tcph->th_sport)) && intrace->cnt
-		   && intrace->cnt < MAX_HOPS) {
-
-		int hop = intrace->cnt - 1;
-		memcpy(&intrace->listener.ip_trace[hop].s_addr, &pkt->iph.ip_src,
-		       sizeof(pkt->iph.ip_src));
-		intrace->listener.proto[hop] = -1;
-		intrace->maxhop = hop;
-		intrace->cnt = MAX_HOPS;
-
 	} else if (intrace->rip.s_addr == pkt->iph.ip_src.s_addr) {
+		if ((tcph->th_flags & TH_ACK)
+			   && (((intrace->ack + intrace->paylSz) == ntohl(tcph->th_ack))
+			       || (intrace->ack + intrace->paylSz + 1) == ntohl(tcph->th_ack))
+			   && (intrace->rip.s_addr == pkt->iph.ip_src.s_addr)
+			   && intrace->cnt && intrace->cnt < MAX_HOPS) {
+
+			int hop = intrace->cnt - 1;
+			intrace->listener.proto[hop] = IPPROTO_TCP;
+			memcpy(&intrace->listener.ip_trace[hop].s_addr, &pkt->iph.ip_src,
+			       sizeof(pkt->iph.ip_src));
+			intrace->maxhop = hop;
+			intrace->cnt = MAX_HOPS;
+		} else if ((tcph->th_flags & TH_RST) && intrace->cnt &&
+			   (intrace->rip.s_addr == pkt->iph.ip_src.s_addr) &&
+			   (intrace->lip.s_addr == pkt->iph.ip_dst.s_addr) &&
+			   (intrace->lport == ntohs(tcph->th_dport)) &&
+			   (intrace->rport == ntohs(tcph->th_sport)) && intrace->cnt
+			   && intrace->cnt < MAX_HOPS) {
+
+			int hop = intrace->cnt - 1;
+			memcpy(&intrace->listener.ip_trace[hop].s_addr, &pkt->iph.ip_src,
+			       sizeof(pkt->iph.ip_src));
+			intrace->listener.proto[hop] = -1;
+			intrace->maxhop = hop;
+			intrace->cnt = MAX_HOPS;
+		}
 		/*
 		 * samkumar: The original code assumes it sees a "pure ACK" but I
-		 * account for data in the packet just in case.
+		 * account for data in the packet just in case. This code also used to
+		 * be in an "else" case that was only triggered if the above two
+		 * clauses were not; I've updated it so that these updates happen on
+		 * every ACK seen.
 		 */
 		uint32_t datalen = ntohs(pkt->iph.ip_len) - (pkt->iph.ip_hl << 2) - (tcph->th_off << 2);
-		memcpy(&intrace->lip, &pkt->iph.ip_dst, sizeof(pkt->iph.ip_dst));
-		intrace->rport = ntohs(tcph->th_sport);
-		intrace->lport = ntohs(tcph->th_dport);
-		intrace->seq = ntohl(tcph->th_seq) + datalen;
-		intrace->ack = ntohl(tcph->th_ack);
+ 		memcpy(&intrace->lip, &pkt->iph.ip_dst, sizeof(pkt->iph.ip_dst));
+ 		intrace->rport = ntohs(tcph->th_sport);
+ 		intrace->lport = ntohs(tcph->th_dport);
+ 		intrace->seq = ntohl(tcph->th_seq) + datalen;
+ 		intrace->ack = ntohl(tcph->th_ack);
 	}
 
 	while (pthread_mutex_unlock(&intrace->mutex)) ;
